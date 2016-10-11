@@ -1,0 +1,184 @@
+---
+title: "Chick Growth by Diet "
+author: "Mark Pratley"
+date: "1 December 2015"
+output: slidy_presentation
+---
+
+```{r, echo=F, warning=F, message=FALSE}
+library(ggvis)
+library(shiny)
+library(dplyr)
+library(ggplot2)
+
+# our dataset
+cw <- ChickWeight
+```
+
+## Chick Weight
+### A (Non-interactive) Shiny Presentation
+
+This is a practise presentation using shiny, ggplot and ggvis to explore the ChickWeight dataset.
+
+To see this as a presentation click [here](../ChickWeight-Presentation.html)
+
+The ChickWeight dataset has 578 rows and 4 columns from an experiment on the effect of diet on early growth of chicks.
+
+First we will explore the dataset and then we will compare the effect of diet on chick weight.
+
+## Variables
+
+* Weight
+    + A numeric vector giving the body weight of the chick (gm).
+
+* Time
+    + A numeric vector giving the number of days since birth when the measurement was made.
+
+* Chick
+    + An ordered factor with levels 18 < ... < 48 giving a unique identifier for the chick.
+
+* Diet
+    + A factor with levels 1-4 indicating which experimental diet the chick received.
+
+## Summary of the Data
+
+```{r}
+summary(cw)
+```
+
+## Weight over Time (Hoverable)
+
+```{r, echo=F}
+all_values <- function(x) {
+  if(is.null(x)) return(NULL)
+  paste0(names(x), ": ", format(x), collapse = "<br />")
+}
+cw %>% 
+  ggvis(x=~Time, y=~weight) %>% 
+  add_tooltip(all_values, "hover") %>% 
+  layer_boxplots()
+```
+
+## Weight Density Plot
+
+```{r, echo=F}
+cw %>% ggvis(x = ~weight) %>% layer_densities()
+```
+
+## Growth Plot for Individual Chicks
+
+```{r, echo=FALSE}
+cw %>% ggplot(aes(x=Time, y=weight, colour=Diet, group=Chick)) +
+        geom_line()
+```
+
+## Summary
+
+From our quick data exploration we can see that there are:
+
+* 50 chicks
+* On 4 Diets
+* Over 21 days
+  
+* Weight
+    + Range 0 < w < 400
+    + Mean of 121
+    + Median of 103
+    + Standard deviation of 71
+
+## Scatter Plot of Growth Data
+
+```{r, echo=FALSE}
+all_values <- function(x) {
+  if(is.null(x)) return(NULL)
+  paste0(names(x), ": ", format(x), collapse = "<br />")
+}
+cw %>% ggvis(x = ~Time, y = ~weight) %>%
+  layer_points(fill.hover := "red") %>%
+  add_tooltip(all_values, "hover") %>% 
+  layer_smooths()
+
+```
+
+## Scatter Plot of Data Grouped by Diet
+
+```{r, echo=F, warning=F, message=FALSE}
+cw %>% ggplot(aes(x=Time, y=weight, colour=Diet)) +
+        geom_point(alpha=.4) +
+        geom_smooth(method = "loess", alpha=.2, size=1) +
+        ggtitle("Chick Growth Grouped by Diet")
+```
+
+## BoxPlot of Weight Data Grouped by diet (Hoverable)
+
+```{r, echo=F, warning=F, message=FALSE}
+# Boxplot with hover values
+cw %>% 
+    ggvis(~Diet, ~weight, fill=~Diet ) %>% 
+    layer_boxplots() %>% 
+    add_tooltip(all_values, "hover") %>% 
+    hide_legend("fill")
+```
+
+## Final Weight Density Grouped by Diet
+
+```{r, echo=F, warning=F, message=FALSE}
+cw %>% 
+  filter(Time==21) %>% 
+  ggplot(aes(x=weight, colour=Diet)) +
+    geom_density()
+```
+
+## Final Weight Histogram Grouped by Diet
+
+```{r, echo=F, warning=F, message=FALSE}
+cw %>% 
+  filter(Time>=21) %>% 
+  ggplot(aes(x=weight, fill=Diet)) +
+    geom_histogram(colour="black", binwidth=50) +
+    facet_grid(Diet ~ .) +
+    theme(legend.position="none")
+```
+
+
+## Survival Rate Grouped by Diet
+
+```{r, echo=F, warning=F, message=FALSE}
+cw2 <- cw %>% 
+        group_by(Time, Diet) %>% 
+        summarise(Num=n(), Percent=n()/10)
+cw2$Percent <- ifelse(cw2$Diet==1, cw2$Percent/2, cw2$Percent)
+
+cw2 %>% 
+  ggplot(aes(x=Time, y=Percent, fill=Diet)) +
+    geom_bar(position="dodge", stat="identity")
+```
+
+## Summary of Final Weights
+### Grouped by Diet
+
+```{r, echo=F, warning=F, message=FALSE}
+cw %>% 
+    filter(Time>=21) %>%
+    group_by(Diet) %>% 
+    summarise(Num=n(), 
+              min=min(weight), 
+              max=max(weight), 
+              mean=mean(weight),
+              median=median(weight),
+              sd=sd(weight)
+              ) %>%
+  as.data.frame() %>% 
+  print()
+```
+
+## Conclusions
+
+- Diet #3 gives the highest mean and median weight
+- Diet #4 is the most consistent with the lowest standard deviation
+- Diet #1 has the highest mortality rate
+- Diet #4 has the biggest mean weight until day 12 - After which Diet #3 took over
+
+In conclusion, for a fixed Diet, then #3 would be the best choice if selecting for mass, but if uniformity was the desired outcome, then Diet #4 would be the best choice.
+
+It would be worth investigating whether a diet consisting of Diet #4 for the first 10-12 days followed by Diet #3 leads to an increased yield.
